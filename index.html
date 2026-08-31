@@ -2,39 +2,122 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="The English Herald — AI destekli İngilizce öğretim platformu. Tıp, veteriner, haber İngilizcesi ve IELTS/TOEFL pratiği.">
+<meta name="theme-color" content="#0d0f14">
 <title>The English Herald</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark" id="body">
 
-<!-- API KEY MODAL -->
-<div id="apiModal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <div class="modal-icon">🔑</div>
-    <h2>Anthropic API Key</h2>
-    <p>AI özelliklerini kullanmak için Anthropic API anahtarınızı girin.<br>
-    <a href="https://console.anthropic.com" target="_blank" style="color:var(--teal)">console.anthropic.com</a>'dan ücretsiz alabilirsiniz.</p>
-    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn-primary" onclick="saveApiKey()">Kaydet & Başla</button>
-      <button class="btn-ghost" onclick="skipApiKey()">API'siz Devam Et</button>
+<a href="#mainContent" class="skip-link">İçeriğe geç</a>
+
+<!-- ═══ AYARLAR MODALI ═══ -->
+<div id="settingsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal-box modal-wide">
+    <button class="modal-close" data-act="closeSettings" aria-label="Kapat">✕</button>
+    <div class="modal-icon">⚙️</div>
+    <h2 id="settingsTitle">Ayarlar</h2>
+
+    <div class="settings-tabs" role="tablist">
+      <button class="settings-tab active" data-act="setSettingsTab" data-tab="api" role="tab">🔑 API</button>
+      <button class="settings-tab" data-act="setSettingsTab" data-tab="voice" role="tab">🔊 Ses</button>
+      <button class="settings-tab" data-act="setSettingsTab" data-tab="study" role="tab">🎯 Çalışma</button>
+      <button class="settings-tab" data-act="setSettingsTab" data-tab="data" role="tab">💾 Veri</button>
     </div>
-    <p style="font-size:11px;color:var(--muted);margin-top:12px">🔒 Anahtar yalnızca tarayıcınızda saklanır, hiçbir sunucuya gönderilmez.</p>
+
+    <!-- API -->
+    <div class="settings-pane" id="setPaneApi">
+      <label class="fld-label" for="apiKeyInput">Anthropic API Anahtarı</label>
+      <div class="input-with-btn">
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        <button class="icon-btn" data-act="toggleKeyVisibility" title="Göster/Gizle" aria-label="Anahtarı göster">👁</button>
+      </div>
+      <p class="fld-hint"><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys → Create Key</p>
+
+      <label class="fld-label" for="modelSelect">Model</label>
+      <select id="modelSelect" class="fld-select">
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5 — hızlı & ekonomik</option>
+        <option value="claude-sonnet-4-5-20250929">Sonnet 4.5 — dengeli (sınav puanlaması için önerilir)</option>
+        <option value="claude-opus-4-1-20250805">Opus 4.1 — en detaylı, en pahalı</option>
+      </select>
+      <p class="fld-hint">Sınav değerlendirmeleri için Sonnet, günlük sohbet için Haiku iyi bir denge.</p>
+
+      <div class="notice-box">🔒 Anahtarın <b>yalnızca bu tarayıcıda</b> saklanır, hiçbir sunucuya gönderilmez. İstekler doğrudan tarayıcından Anthropic'e gider.</div>
+    </div>
+
+    <!-- SES -->
+    <div class="settings-pane hidden" id="setPaneVoice">
+      <label class="fld-label" for="voiceSelect">Seslendirme (TTS) sesi</label>
+      <select id="voiceSelect" class="fld-select"></select>
+
+      <label class="fld-label" for="rateRange">Konuşma hızı — <span id="rateVal">0.85</span>×</label>
+      <input type="range" id="rateRange" class="fld-range" min="0.5" max="1.3" step="0.05" value="0.85">
+
+      <label class="fld-label toggle-row"><input type="checkbox" id="autoSpeakChk"> AI cevaplarını otomatik seslendir</label>
+      <label class="fld-label toggle-row"><input type="checkbox" id="autoListenChk"> Sesli modda AI bitince mikrofonu aç</label>
+
+      <button class="btn-ghost" data-act="testVoice" style="width:100%;margin-top:8px">🔊 Sesi Test Et</button>
+      <div class="notice-box" id="micSupportNote"></div>
+    </div>
+
+    <!-- ÇALIŞMA -->
+    <div class="settings-pane hidden" id="setPaneStudy">
+      <label class="fld-label">Günlük kelime hedefi</label>
+      <div class="goal-set-row" id="goalChipsSettings"></div>
+
+      <label class="fld-label" for="levelSelect">İngilizce seviyen (AI buna göre konuşur)</label>
+      <select id="levelSelect" class="fld-select">
+        <option value="A2">A2 — Temel</option>
+        <option value="B1">B1 — Orta öncesi</option>
+        <option value="B2">B2 — Orta üstü</option>
+        <option value="C1">C1 — İleri</option>
+        <option value="C2">C2 — Ustalık</option>
+      </select>
+
+      <label class="fld-label" for="targetBandInput">Hedef IELTS bandı</label>
+      <select id="targetBandInput" class="fld-select">
+        <option value="5.5">5.5</option><option value="6">6.0</option>
+        <option value="6.5">6.5</option><option value="7">7.0</option>
+        <option value="7.5">7.5</option><option value="8">8.0+</option>
+      </select>
+
+      <label class="fld-label toggle-row"><input type="checkbox" id="correctChk"> Sohbette yazdığım İngilizceyi otomatik düzelt</label>
+    </div>
+
+    <!-- VERİ -->
+    <div class="settings-pane hidden" id="setPaneData">
+      <div class="data-stats" id="dataStats"></div>
+      <button class="btn-ghost" data-act="exportData" style="width:100%;margin-bottom:8px">⬇️ Tüm verimi yedekle (.json)</button>
+      <button class="btn-ghost" data-act="exportCsv" style="width:100%;margin-bottom:8px">📄 Kelime haznemi dışa aktar (.csv)</button>
+      <label class="btn-ghost import-label" style="width:100%;margin-bottom:8px;display:block;text-align:center">
+        ⬆️ Yedekten geri yükle<input type="file" id="importFile" accept=".json" hidden>
+      </label>
+      <button class="btn-danger" data-act="resetData" style="width:100%">🗑️ Tüm verimi sil</button>
+      <div class="notice-box">Veriler tarayıcının localStorage'ında tutulur. Tarayıcı verilerini temizlersen kaybolur — ara sıra yedek al.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-primary" data-act="saveSettings">Kaydet</button>
+      <button class="btn-ghost" data-act="closeSettings">Kapat</button>
+    </div>
   </div>
 </div>
 
-<!-- HEADER -->
+<!-- ═══ HEADER ═══ -->
 <header id="siteHeader">
   <div class="header-inner">
     <div class="header-top">
       <div class="header-chips" id="headerChips"></div>
       <div class="header-right">
         <div class="streak-badge" id="streakBadge" title="Gün serisi">🔥 <span id="streakNum">0</span></div>
-        <button class="icon-btn" onclick="toggleTheme()" title="Tema değiştir" id="themeBtn">🌙</button>
-        <button class="icon-btn" onclick="showApiModal()" title="API Ayarları">🔑</button>
+        <button class="icon-btn" data-act="toggleTheme" title="Tema değiştir" id="themeBtn" aria-label="Tema değiştir">🌙</button>
+        <button class="icon-btn" data-act="openSettings" title="Ayarlar" aria-label="Ayarlar">⚙️</button>
       </div>
     </div>
     <div class="header-body">
@@ -57,32 +140,42 @@
   </div>
 </header>
 
-<!-- NAV -->
-<nav id="mainNav">
+<!-- ═══ NAV ═══ -->
+<nav id="mainNav" aria-label="Ana menü">
   <div class="nav-inner">
-    <button class="nav-btn active" data-tab="lessons" onclick="switchTab('lessons')">📖 Dersler</button>
-    <button class="nav-btn" data-tab="daily" onclick="switchTab('daily')">📰 Günlük</button>
-    <button class="nav-btn" data-tab="review" onclick="switchTab('review')">🔁 Tekrar</button>
-    <button class="nav-btn" data-tab="bank" onclick="switchTab('bank')">📚 Haznem</button>
-    <button class="nav-btn" data-tab="progress" onclick="switchTab('progress')">📊 İlerleme</button>
-    <button class="nav-btn" data-tab="chat" onclick="switchTab('chat')">💬 AI Öğretmen</button>
+    <button class="nav-btn active" data-tab="lessons" data-act="switchTab">📖 Dersler</button>
+    <button class="nav-btn" data-tab="daily" data-act="switchTab">📰 Günlük</button>
+    <button class="nav-btn" data-tab="review" data-act="switchTab">🔁 Tekrar</button>
+    <button class="nav-btn" data-tab="bank" data-act="switchTab">📚 Haznem</button>
+    <button class="nav-btn nav-btn-hl" data-tab="exam" data-act="switchTab">🎓 IELTS / TOEFL</button>
+    <button class="nav-btn" data-tab="progress" data-act="switchTab">📊 İlerleme</button>
+    <button class="nav-btn" data-tab="chat" data-act="switchTab">💬 AI Öğretmen</button>
   </div>
 </nav>
 
-<!-- MAIN -->
+<!-- ═══ MAIN ═══ -->
 <main id="mainContent">
   <div id="tabLessons" class="tab-pane active"></div>
   <div id="tabDaily" class="tab-pane hidden"></div>
   <div id="tabReview" class="tab-pane hidden"></div>
   <div id="tabBank" class="tab-pane hidden"></div>
+  <div id="tabExam" class="tab-pane hidden"></div>
   <div id="tabProgress" class="tab-pane hidden"></div>
   <div id="tabChat" class="tab-pane hidden"></div>
 </main>
 
-<!-- TOAST -->
-<div id="toast" class="toast hidden"></div>
+<footer class="site-footer">
+  <span>The English Herald · Türkçe'den İngilizce'ye, Konu Konu, Gün Gün</span>
+  <span class="footer-keys">Kısayollar: <kbd>1-7</kbd> sekmeler · <kbd>Space</kbd> kart çevir · <kbd>Esc</kbd> kapat</span>
+</footer>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <script src="data.js"></script>
+<script src="exam-data.js"></script>
 <script src="app.js"></script>
+<script src="chat.js"></script>
+<script src="exam.js"></script>
 </body>
 </html>
