@@ -38,7 +38,7 @@ const S = {
   dailyLoading: false,
   // ayarlar
   cfg: Object.assign({
-    apiKey: '', model: 'claude-haiku-4-5-20251001', voiceURI: '', rate: 0.85,
+    apiKey: '', workspaceId: '', model: 'claude-haiku-4-5-20251001', voiceURI: '', rate: 0.85,
     autoSpeak: false, autoListen: false, dailyGoal: 5, level: 'B1',
     targetBand: '6.5', autoCorrect: true,
   }, LS.get('eh_cfg', {})),
@@ -199,10 +199,12 @@ function apiHeaders() {
     'x-api-key': S.cfg.apiKey,
     'anthropic-version': '2023-06-01',
     'anthropic-dangerous-direct-browser-access': 'true',
+  ...(S.cfg.workspaceId ? { 'anthropic-workspace-id': S.cfg.workspaceId } : {}),
   };
 }
 
 function apiErrMsg(status, body) {
+  if (/anthropic-workspace-id/i.test(body || '')) return 'Anahtarın bir workspace\'e bağlı değil. ⚙️ Ayarlar → API → "Workspace ID" alanını doldur (console.anthropic.com → Settings → Workspaces → ID sütunu), ya da workspace\'e özel yeni bir anahtar oluştur.';
   if (status === 401) return 'API anahtarı geçersiz. Ayarlar → API bölümünden kontrol et.';
   if (status === 429) return 'Çok fazla istek. Biraz bekleyip tekrar dene.';
   if (status === 400 && /credit|balance/i.test(body || '')) return 'API kredin bitmiş görünüyor. console.anthropic.com → Billing.';
@@ -1005,6 +1007,7 @@ Object.assign(ACTIONS, {
 function openSettings() {
   const m = document.getElementById('settingsModal');
   document.getElementById('apiKeyInput').value = S.cfg.apiKey || '';
+  document.getElementById('workspaceInput').value = S.cfg.workspaceId || '';
   document.getElementById('modelSelect').value = S.cfg.model;
   document.getElementById('levelSelect').value = S.cfg.level;
   document.getElementById('targetBandInput').value = S.cfg.targetBand;
@@ -1046,6 +1049,7 @@ function saveSettings() {
   const key = document.getElementById('apiKeyInput').value.trim();
   if (key && !key.startsWith('sk-')) { showToast('API anahtarı "sk-" ile başlamalı', 'error'); return; }
   S.cfg.apiKey = key;
+  S.cfg.workspaceId = document.getElementById('workspaceInput').value.trim();
   S.cfg.model = document.getElementById('modelSelect').value;
   S.cfg.level = document.getElementById('levelSelect').value;
   S.cfg.targetBand = document.getElementById('targetBandInput').value;

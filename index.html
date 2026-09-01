@@ -40,6 +40,12 @@
       </div>
       <p class="fld-hint"><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys → Create Key</p>
 
+      <label class="fld-label" for="workspaceInput">Workspace ID <span style="font-weight:400;color:var(--dim)">— gerekirse</span></label>
+      <input type="text" id="workspaceInput" class="fld-select" placeholder="wrkspc_..." autocomplete="off" spellcheck="false">
+      <p class="fld-hint">Sadece <code class="md-code">anthropic-workspace-id is required</code> hatası alırsan doldur.
+        <a href="https://console.anthropic.com/settings/workspaces" target="_blank" rel="noopener">Settings → Workspaces</a> → <b>ID</b> sütunundaki <code class="md-code">wrkspc_…</code> değerini kopyala.
+        Alternatif: anahtar oluştururken belirli bir workspace seçersen bu alan hiç gerekmez.</p>
+
       <label class="fld-label" for="modelSelect">Model</label>
       <select id="modelSelect" class="fld-select">
         <option value="claude-haiku-4-5-20251001">Haiku 4.5 — hızlı & ekonomik</option>
