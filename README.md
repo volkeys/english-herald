@@ -14,7 +14,7 @@ Sunucusuz, kurulumsuz, tek sayfalık bir web uygulaması. Tüm veriler tarayıc�
 | 📖 **Dersler** | 7 konu, 15 ünite, 138 ders kelimesi (+ **1 962 kelimelik kürasyonlu sözlük**) · çevrilebilir kartlar, telaffuz, karışık sıralı sınavlar, yanlışların özeti |
 | 📰 **Günlük** | **Her gün otomatik yenilenen brifing** — aşağıda |
 | 🔁 **Tekrar** | SM-2 aralıklı tekrar algoritması · "bekleyen" kartlar önce gelir, klavye kısayolları |
-| 📚 **Haznem** | Üç mod: ⭐ *Haznem* (arama, filtre, sıralama, tekrar tarihi, CSV dışa aktarma) · 📕 **Tüm sözlük — 2 084 kelime** · ⚡ *Üret & içe aktar* (AI paket üreticisi + CSV içe aktarma) |
+| 📚 **Haznem** | Üç mod: ⭐ *Haznem* (arama, filtre, sıralama, tekrar tarihi, CSV dışa aktarma) · 📕 **Tüm sözlük — 2 034 kelime** · ⚡ *Üret & içe aktar* (AI paket üreticisi + CSV içe aktarma) |
 | 🎓 **IELTS / TOEFL** | Writing · Speaking · Reading · Listening — hepsi AI değerlendirmeli (aşağıda) |
 | 📊 **İlerleme** | XP, seviye ve unvan, gün serisi, 90 günlük aktivite haritası, 12 rozet |
 | 💬 **AI Öğretmen** | Streaming (canlı akan) yanıt, sesli konuşma, anlık hata düzeltme, rol yapma senaryoları |
@@ -41,14 +41,14 @@ vaka sunumu, muayene notu, reçete, kötü haber verme gibi gerçek klinik bağl
 
 ---
 
-## 📕 Sözlük — 2 084 kelime, 10 000'e giden yol
+## 📕 Sözlük — 2 034 kelime, 10 000'e giden yol
 
 **Haznem** sekmesi artık üç modlu:
 
 | Mod | Ne yapar |
 |---|---|
 | ⭐ **Haznem** | Yıldızladığın kelimeler — tekrar programına giren, SM-2 ile takip edilen liste |
-| 📕 **Tüm sözlük** | **2 084 kelime.** İngilizce, Türkçe ve örnek cümlelerde arama · konu filtresi · CEFR seviye filtresi · kaynak filtresi (ders / sözlük / kendi kelimelerin) |
+| 📕 **Tüm sözlük** | **2 034 kelime.** İngilizce, Türkçe ve örnek cümlelerde arama · konu filtresi · CEFR seviye filtresi · kaynak filtresi (ders / sözlük / kendi kelimelerin) |
 | ⚡ **Üret & içe aktar** | AI'a konu + seviye + adet verip yeni paket ürettirirsin, ya da hazır CSV'ni yüklersin |
 
 ### Sözlük nereden geliyor?
@@ -160,6 +160,38 @@ Service worker sayesinde dersler, kelime haznen ve tekrar sistemi internet olmad
 (AI özellikleri doğal olarak bağlantı ister). Telefonda "Ana ekrana ekle" dersen uygulama gibi açılır.
 
 ---
+
+## 📱 Telefona uygulama olarak kurmak
+
+Her iki proje de **PWA** — App Store / Play Store'a gerek yok, siteyi açıp ana ekrana eklemen yeterli.
+Sonrası gerçek bir uygulama gibi: kendi simgesi, tam ekran (tarayıcı çubuğu yok), çevrimdışı çalışma.
+
+### iPhone / iPad (Safari — Chrome'dan olmaz)
+1. **Safari**'de siteyi aç
+2. Alttaki **Paylaş** düğmesi (kare + yukarı ok)
+3. Listede aşağı in → **Ana Ekrana Ekle**
+4. **Ekle** → simge ana ekranda
+
+### Android (Chrome)
+1. Chrome'da siteyi aç
+2. Sağ üstteki **⋮** → **Uygulamayı yükle** *(ya da "Ana ekrana ekle")*
+3. Alttan bir kurulum önerisi de çıkabilir — ona da basabilirsin
+
+### Kurulunca ne değişir?
+- Dersler, sözlük, tekrar sistemi, kısayollar **internetsiz** çalışır
+- Sadece AI özellikleri (sohbet, sınav değerlendirmesi, günlük brifing) internet ister
+- API anahtarın ve kelimelerin **sadece o cihazda** saklanır — telefon ve bilgisayar ayrı ayrıdır
+
+### Telefonda çalışmayan tek şey
+**iPhone'da mikrofonla konuşma tanıma çalışmaz.** Apple, WebKit'te Speech Recognition API'sini
+web sitelerine açmıyor — Chrome yüklesen de değişmez, çünkü iOS'ta her tarayıcı Safari motorunu kullanır.
+Seslendirme (🔊 dinleme) her cihazda çalışır, Speaking / Tala pratiğini **yazarak** yapabilirsin.
+Android Chrome'da mikrofon sorunsuz çalışır.
+
+### Uygulamayı güncellemek
+Yeni sürümü GitHub'a yükledikten sonra telefondaki uygulamayı **kapat ve yeniden aç** — iki açılışta
+kendini günceller. Hemen istiyorsan: uygulamayı sil, tarayıcıdan siteyi aç, tekrar ana ekrana ekle.
+Kelimelerin ve ayarların silinmeden önce **⚙️ → 💾 Veri → yedek al** demeyi unutma.
 
 ## 🛠️ Teknik
 

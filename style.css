@@ -668,3 +668,29 @@ kbd{font-family:var(--mono);font-size:10px;background:var(--border);color:var(--
 .ol-acts .bt{font-size:14px;padding:4px 7px}
 .ol-acts .bt.saved{color:var(--gold)}
 @media(max-width:640px){.ol-acts{flex-direction:row}}
+
+/* ═══ TELEFONA KURULU MOD (PWA) — çentik & ev düğmesi boşlukları ═══ */
+@supports (padding: max(0px)) {
+  header .header-inner{
+    padding-left:max(16px, env(safe-area-inset-left));
+    padding-right:max(16px, env(safe-area-inset-right));
+    padding-top:env(safe-area-inset-top);
+  }
+  nav .nav-inner{
+    padding-left:max(16px, env(safe-area-inset-left));
+    padding-right:max(16px, env(safe-area-inset-right));
+  }
+  main{
+    padding-left:max(16px, env(safe-area-inset-left));
+    padding-right:max(16px, env(safe-area-inset-right));
+    padding-bottom:calc(80px + env(safe-area-inset-bottom));
+  }
+  .site-footer{
+    padding-left:max(16px, env(safe-area-inset-left));
+    padding-right:max(16px, env(safe-area-inset-right));
+    padding-bottom:calc(40px + env(safe-area-inset-bottom));
+  }
+  .modal-box{ margin-bottom:env(safe-area-inset-bottom) }
+}
+/* Telefonda uzun basınca çıkan mavi seçim parıltısını kapat */
+button, .nav-btn, .filter-chip, .bt, .seg-btn{ -webkit-tap-highlight-color:transparent }

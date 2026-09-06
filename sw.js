@@ -1,10 +1,10 @@
 // The English Herald — Service Worker
 // Ders içeriği çevrimdışı çalışsın; AI istekleri asla önbelleğe alınmasın.
-const CACHE = 'herald-v2.4.0';
+const CACHE = 'herald-v2.5.0';
 const SHELL = [
   './', './index.html', './style.css',
   './data.js', './vocab.js', './exam-data.js', './app.js', './ordlista.js', './chat.js', './exam.js',
-  './manifest.json',
+  './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png',
 ];
 
 self.addEventListener('install', (e) => {

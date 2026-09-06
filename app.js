@@ -479,8 +479,10 @@ function updateHeader() {
   set('xpLabel', S.xp + ' XP');
   set('levelLabel', `Sv.${lv.level} · ${lv.title}`);
   set('streakNum', S.streak);
-  const totalWords = Object.values(CONTENT).reduce((s, t) => s + t.units.reduce((a, u) => a + u.vocab.length, 0), 0);
-  set('siteSubtitle', `${totalWords}+ Kelime · İnsan & Veteriner Tıbbı · IELTS/TOEFL · Canlı AI Öğretmen`);
+  const totalWords = (typeof dict === 'function' && dict().length)
+    ? dict().length
+    : Object.values(CONTENT).reduce((s, t) => s + t.units.reduce((a, u) => a + u.vocab.length, 0), 0);
+  set('siteSubtitle', `${totalWords.toLocaleString('tr-TR')} kelime · İnsan & Veteriner Tıbbı · IELTS/TOEFL · Canlı AI Öğretmen`);
   const chips = document.getElementById('headerChips');
   if (chips) chips.innerHTML = [['var(--red)', 'İnsan Tıbbı'], ['var(--orange)', 'Veteriner'], ['var(--teal)', 'Haberler'], ['var(--blue)', 'IELTS']].map(([c, t]) => pill(c, t)).join('');
   const sb = document.getElementById('streakBadge');
@@ -1218,7 +1220,7 @@ function openSettings() {
   fillVoiceSelect();
   document.getElementById('micSupportNote').innerHTML = Mic.supported
     ? '🎙️ Mikrofon tanıma destekleniyor. Sesli sohbet ve Speaking pratiği kullanılabilir.'
-    : '⚠️ Bu tarayıcı konuşma tanımayı desteklemiyor. Sesli özellikler için Chrome veya Edge kullan.';
+    : '⚠️ Bu cihazda konuşma tanıma yok — mikrofonla konuşma çalışmaz. <b>iPhone/iPad\'de hiçbir tarayıcıda çalışmaz</b> (Chrome dahil), bu Apple kısıtlaması. Android Chrome ve masaüstü Chrome/Edge destekler.<br>Seslendirme (dinleme) her cihazda çalışır; Speaking pratiğini yazarak da yapabilirsin.';
   document.getElementById('goalChipsSettings').innerHTML = [3, 5, 10, 15, 20].map(n =>
     `<button class="goal-chip ${S.cfg.dailyGoal === n ? 'active' : ''}" data-act="setGoal2" data-n="${n}">${n} kelime</button>`).join('');
   renderDataStats();
