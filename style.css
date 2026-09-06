@@ -622,3 +622,49 @@ kbd{font-family:var(--mono);font-size:10px;background:var(--border);color:var(--
 .chat-msg.ai .chat-bubble{white-space:normal}
 .fix-card{max-width:82%}
 .chat-msg.ai>div{min-width:0}
+
+/* ═══ GÜNLÜK BRİFİNG ═══ */
+.fld-textarea{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;line-height:1.7;font-family:'DM Sans',sans-serif;resize:vertical;outline:none}
+.fld-textarea:focus{border-color:var(--teal)}
+.daily-head-btns{display:flex;gap:8px;flex-wrap:wrap}
+.pane-sub{font-size:12px;font-weight:400;color:var(--muted)}
+.daily-trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:20px 0}
+.dt-card{margin-bottom:0}
+.dt-main{font-size:16px;font-weight:700;line-height:1.5;margin-bottom:5px}
+.dt-tr{font-size:13px;color:var(--muted);margin-bottom:7px}
+.dt-ex{display:flex;align-items:center;gap:6px;font-size:13px;font-style:italic;color:var(--teal);line-height:1.7;margin-top:6px}
+.dt-tip{font-size:12px;color:var(--muted);line-height:1.7;margin-top:8px;padding:9px 11px;background:var(--bg);border-radius:7px}
+.custom-panel .panel-title{display:flex;align-items:center}
+.custom-out{font-size:14px;line-height:1.85}
+.custom-empty{border-style:dashed}
+
+/* ═══ ANA SAYFA — GÜNÜN KELİMELERİ ŞERİDİ ═══ */
+.home-daily{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px}
+.hd-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.hd-title{font-size:14px;font-weight:700}
+.hd-sub{font-size:11.5px;color:var(--muted)}
+.hd-head .btn-xs{margin-left:auto}
+.hd-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}
+.hd-card{background:var(--bg);border-radius:8px;padding:10px 12px}
+.hd-sv{font-family:var(--mono);font-size:13.5px;font-weight:600;line-height:1.4}
+.hd-tr{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.hd-form{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:5px}
+.hd-acts{display:flex;gap:2px;margin-top:7px}
+.hd-acts .bt.saved{color:var(--gold)}
+@media(max-width:640px){.hd-row{grid-template-columns:1fr 1fr}.hd-head .btn-xs{margin-left:0;width:100%}}
+/* ═══ TÜM SÖZLÜK (ordlista) ═══ */
+.ol-list{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.ol-row{display:flex;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 13px}
+.ol-row.unpicked{opacity:.42}
+.ol-row.picked{border-color:var(--green)}
+.ol-main{flex:1;min-width:0}
+.ol-sv{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-family:var(--mono);font-size:14px;font-weight:600;line-height:1.4}
+.ol-lvl{font-family:var(--mono);font-size:9.5px;font-weight:700;background:var(--bg);color:var(--blue);border-radius:4px;padding:1px 5px}
+.ol-tr{font-size:13px;color:var(--text);margin-top:3px;line-height:1.5}
+.ol-form{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:4px;line-height:1.5}
+.ol-ex{font-size:12.5px;font-style:italic;color:var(--muted);margin-top:5px;line-height:1.6}
+.ol-tip{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.6;background:var(--bg);border-radius:6px;padding:7px 9px}
+.ol-acts{flex:none;display:flex;flex-direction:column;gap:3px}
+.ol-acts .bt{font-size:14px;padding:4px 7px}
+.ol-acts .bt.saved{color:var(--gold)}
+@media(max-width:640px){.ol-acts{flex-direction:row}}

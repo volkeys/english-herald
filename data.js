@@ -394,3 +394,73 @@ KURAL: Yanıtın YALNIZCA şu JSON olsun, başka hiçbir şey yazma:
 - 3 soruluk quiz üret: biri kelime anlamı, biri bağlamdan çıkarım, biri kullanım/gramer.
 - Kategoriler: medical, veterinary, news, daily, grammar, business, ielts
 - Tıp/veteriner terimlerinde Latince veya Yunanca kökeni "tip" alanında belirt.`;
+
+// ── GÜNÜN MESLEKİ İFADESİ (API'siz, tarihe göre döner) ────
+const PRO_PHRASES = [
+  { en: "The patient presented with a three-day history of shortness of breath.", tr: "Hasta üç gündür süren nefes darlığı şikâyetiyle başvurdu.", ctx: "vaka sunumu", tip: "'present with' = ...şikâyetiyle başvurmak. Vaka sunumunun 1 numaralı kalıbı." },
+  { en: "On examination, the abdomen was soft and non-tender.", tr: "Muayenede karın yumuşak ve hassasiyetsizdi.", ctx: "muayene notu", tip: "'on examination' (kısaltması O/E) muayene bulgularına geçişin standart ifadesi." },
+  { en: "Vital signs were within normal limits.", tr: "Vital bulgular normal sınırlar içindeydi.", ctx: "muayene notu", tip: "Kısaltma: WNL. 'within normal limits' — çok sık kullanılır." },
+  { en: "Differential diagnoses include pneumonia and pulmonary embolism.", tr: "Ayırıcı tanılar arasında pnömoni ve pulmoner emboli yer alıyor.", ctx: "değerlendirme", tip: "'differential diagnosis' çoğulu 'differentials' diye kısaltılır." },
+  { en: "We will monitor the patient closely and reassess in six hours.", tr: "Hastayı yakından izleyip altı saat sonra yeniden değerlendireceğiz.", ctx: "plan", tip: "'reassess' = yeniden değerlendirmek. Plan bölümünün klasik fiili." },
+  { en: "The findings are consistent with early osteoarthritis.", tr: "Bulgular erken evre osteoartritle uyumlu.", ctx: "radyoloji / değerlendirme", tip: "'consistent with' = ...ile uyumlu. Kesin tanı koymadan yorum yapmanın yolu." },
+  { en: "There is no evidence of metastatic disease.", tr: "Metastatik hastalık bulgusu yok.", ctx: "radyoloji", tip: "'no evidence of' (NED) — rapor dilinde olumsuzluğun standart ifadesi." },
+  { en: "I would like to refer you to a specialist for further assessment.", tr: "Sizi ileri değerlendirme için bir uzmana yönlendirmek istiyorum.", ctx: "hasta görüşmesi", tip: "'refer someone to' = sevk etmek. 'I would like to...' nazik kalıbı." },
+  { en: "Do you have any allergies to medication?", tr: "İlaç alerjiniz var mı?", ctx: "anamnez", tip: "Her anamnezde sorulur. 'allergic to' sıfat hâli: 'Are you allergic to penicillin?'" },
+  { en: "Take one tablet twice daily with food for seven days.", tr: "Yedi gün boyunca günde iki kez, yemekle birlikte bir tablet alın.", ctx: "reçete", tip: "Doz talimatının tam formülü: miktar + sıklık + koşul + süre." },
+  { en: "Please come back if the symptoms get worse.", tr: "Şikâyetler kötüleşirse lütfen tekrar gelin.", ctx: "hasta bilgilendirme", tip: "'safety netting' denir — hukuken de önemli bir cümle." },
+  { en: "I'm afraid the results show something we need to discuss.", tr: "Ne yazık ki sonuçlar konuşmamız gereken bir şey gösteriyor.", ctx: "kötü haber verme", tip: "'I'm afraid...' kötü habere yumuşak giriş. Doğrudan söylemeden önce uyarı verir." },
+  { en: "Could you describe the pain for me?", tr: "Ağrıyı tarif edebilir misiniz?", ctx: "anamnez", tip: "Açık uçlu soru. 'Could you...' en kibar rica biçimi." },
+  { en: "The owner reports that the dog has been off its food since Monday.", tr: "Sahibi köpeğin pazartesiden beri yemek yemediğini bildiriyor.", ctx: "veteriner anamnez", tip: "'be off one's food' = iştahsız olmak — veteriner İngilizcesinin kalıbı." },
+  { en: "We recommend radiographs of the right hind limb.", tr: "Sağ arka bacağın röntgenini öneriyoruz.", ctx: "veteriner plan", tip: "'radiograph' resmî terim, 'X-ray' günlük. Taraf belirtmek zorunlu." },
+  { en: "The prognosis is guarded at this stage.", tr: "Bu aşamada prognoz şüpheli.", ctx: "prognoz", tip: "Prognoz ölçeği: excellent > good > fair > guarded > poor > grave." },
+  { en: "Informed consent was obtained prior to the procedure.", tr: "İşlem öncesinde bilgilendirilmiş onam alındı.", ctx: "kayıt", tip: "'prior to' = ...den önce (resmî). 'obtain consent' sabit eşdizimdir." },
+  { en: "Please do not hesitate to contact us if you have any questions.", tr: "Sorunuz olursa çekinmeden bize ulaşın.", ctx: "yazışma", tip: "Resmî e-postaların standart kapanışı." },
+  { en: "I am writing to follow up on your appointment last week.", tr: "Geçen haftaki randevunuzla ilgili bilgi vermek için yazıyorum.", ctx: "yazışma", tip: "'follow up on' = takibini yapmak. E-posta açılışının kalıbı." },
+  { en: "The treatment was well tolerated with no adverse effects.", tr: "Tedavi iyi tolere edildi, yan etki görülmedi.", ctx: "takip notu", tip: "'well tolerated' ve 'adverse effects' — ikisi de klinik yazının sabit ifadeleri." },
+];
+
+
+// ── KULLANICININ GÜNLÜK ÖZEL PROMPTU İÇİN SİSTEM TALİMATI ──
+const CUSTOM_DAILY_SYSTEM = `Sen "The English Herald" uygulamasının günlük asistanısın. Kullanıcı Türk ve İngilizce öğreniyor.
+
+Aşağıda kullanıcının kendi yazdığı bir talimat var. Onu bugün için yerine getir.
+
+KURALLAR
+- Açıklamalar TÜRKÇE, dil malzemesi (kelime, cümle, örnek) İNGİLİZCE olsun.
+- Her gün farklı içerik üret: aynı örnekleri, aynı kelimeleri tekrarlama. Tarihi bir çeşitlilik kaynağı olarak kullan.
+- Kısa ve uygulanabilir ol: en fazla 400 kelime. Markdown başlık ve madde işareti kullanabilirsin.
+- Uydurma bilgi verme. Güncel bir olaya atıf gerekiyorsa ve emin değilsen, genel ve doğru bilgiye dayan; kesin tarih/rakam uydurma.
+- Tıbbi ya da veteriner içerik varsa: bilgi amaçlıdır, klinik kararın yerine geçmez — bunu gerektiğinde belirt.
+- Talimatta ne isteniyorsa onu yap; talimatı yeniden yazma ya da özetleme, doğrudan sonucu ver.`;
+
+// ── HAZIR PAKET: GÜNLÜK KLİNİK İNGİLİZCE PAKETİ ──────────
+const VET_DAILY_PACKAGE = `Bana bugün için bir "Günlük Klinik İngilizce Paketi" hazırla.
+Ben Türk bir veteriner hekim / sağlık profesyoneliyim. Amacım hem mesleki İngilizcemi hem klinik bilgimi her gün bir adım ilerletmek.
+
+Şu altı bölümü, tam bu sırayla ve bu başlıklarla ver:
+
+## 1. Case of the day
+Kısa bir klinik vaka (5-7 satır, İngilizce): tür/yaş/cinsiyet/ağırlık, presenting complaint, history, examination findings, lab results.
+Altına Türkçe iki cümle: bu vakada asıl dikkat edilmesi gereken ne?
+
+## 2. Five terms
+Vakayla ilgili 5 İngilizce mesleki terim. Her biri şu biçimde:
+**term** /telaffuz/ — Türkçe karşılık · örnek cümle (İngilizce) · kısa köken ya da kullanım notu (Türkçe)
+
+## 3. Clinical phrase
+Bu vakada kullanacağın bir kayıt/sunum kalıbı (İngilizce). Nerede kullanıldığını ve neden öyle kurulduğunu Türkçe açıkla.
+
+## 4. Differentials
+Vakaya uygun 3 ayırıcı tanı, İngilizce adlarıyla. Her birinin yanında tek satır Türkçe: bunu düşündüren/dışlayan bulgu ne?
+
+## 5. Talking to the owner / patient
+Durumu sahibine ya da hastaya anlatan, jargon İÇERMEYEN, sade İngilizce 2-3 cümle. Altına Türkçe not: hangi terimi neden sadeleştirdin?
+
+## 6. Quick check
+Bugünün paketinden tek bir kontrol sorusu ve hemen altında cevabı (İngilizce soru, Türkçe kısa cevap).
+
+KURALLAR
+- Her gün BAŞKA bir tür, başka bir sistem ve başka bir aciliyet düzeyi seç.
+- Vaka gerçekçi olsun ama uydurma kesin epidemiyolojik rakam verme.
+- İlaç adı geçerse doz aralığını referans olarak sun, kesin ordinasyon gibi değil; doğrulanması gerektiğini belirt.
+- Toplam 400 kelimeyi aşma.`;

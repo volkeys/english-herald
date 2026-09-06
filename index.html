@@ -94,6 +94,16 @@
       </select>
 
       <label class="fld-label toggle-row"><input type="checkbox" id="correctChk"> Sohbette yazdığım İngilizceyi otomatik düzelt</label>
+
+      <label class="fld-label" for="dailyPromptInput">⚡ Günlük özel prompt</label>
+      <textarea id="dailyPromptInput" class="fld-textarea" rows="5" placeholder="Cowork'te her gün çalıştırdığın promptu buraya yapıştır.&#10;Örn: Bugün için 5 tıp terimi ver, her birini bir vaka cümlesiyle örnekle ve etimolojisini yaz."></textarea>
+      <div class="btn-row" style="margin:8px 0 0">
+        <button class="btn-ghost btn-xs" data-act="loadVetPackage">⚡ Hazır: Günlük Klinik İngilizce Paketi</button>
+        <button class="btn-ghost btn-xs" data-act="clearDailyPrompt">✕ Boşalt</button>
+      </div>
+      <p class="fld-hint">Uygulama her gün <b>bir kez</b> bu promptu çalıştırıp sonucu <b>Günlük</b> sekmesine ayrı bir bölüm olarak ekler.
+        Hazır paket her gün başka bir vakadan: <i>case of the day · 5 term · clinical phrase · differentials · talking to the owner · quick check</i>.
+        Kendi promptunu yazmak istersen üzerine yaz; boş bırakırsan bu bölüm görünmez.</p>
     </div>
 
     <!-- VERİ -->
@@ -179,8 +189,10 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <script src="data.js"></script>
+<script src="vocab.js"></script>
 <script src="exam-data.js"></script>
 <script src="app.js"></script>
+<script src="ordlista.js"></script>
 <script src="chat.js"></script>
 <script src="exam.js"></script>
 </body>

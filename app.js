@@ -24,7 +24,7 @@ const S = {
   quiz: false, qIdx: 0, sel: null, score: 0, done: false, quizOrder: [], quizWrong: [],
   // hazne / tekrar
   bank: LS.get('eh_bank', []),
-  bFil: 'all', bSrch: '', bSort: 'new',
+  bFil: 'all', bSrch: '', bSort: 'new', bMode: 'mine',
   rIdx: 0, rFlip: false, rQueue: null,
   // ilerleme
   completed: LS.get('eh_completed', {}),
@@ -35,12 +35,12 @@ const S = {
   activityLog: LS.get('eh_activity', {}),
   badges: LS.get('eh_badges', []),
   // günlük
-  dailyLoading: false,
+  dailyLoading: false, customLoading: false,
   // ayarlar
   cfg: Object.assign({
     apiKey: '', workspaceId: '', model: 'claude-haiku-4-5-20251001', voiceURI: '', rate: 0.85,
     autoSpeak: false, autoListen: false, dailyGoal: 5, level: 'B1',
-    targetBand: '6.5', autoCorrect: true,
+    targetBand: '6.5', autoCorrect: true, dailyPrompt: null,
   }, LS.get('eh_cfg', {})),
   settingsTab: 'api',
 };
@@ -52,6 +52,10 @@ const S = {
   const oldGoal = LS.get('eh_goal', null);
   if (oldGoal && S.cfg.dailyGoal === 5) { S.cfg.dailyGoal = oldGoal; saveCfg(); }
 })();
+
+if (S.cfg.dailyPrompt === null || S.cfg.dailyPrompt === undefined) {
+  S.cfg.dailyPrompt = (typeof VET_DAILY_PACKAGE !== 'undefined') ? VET_DAILY_PACKAGE : '';
+}
 
 function saveCfg() { LS.set('eh_cfg', S.cfg); }
 function saveBank() { LS.set('eh_bank', S.bank); }
@@ -324,7 +328,7 @@ function checkBadges() {
 }
 
 // ── KELİME REGISTRY (XSS-güvenli aksiyonlar) ─────────────
-const REG = { lesson: [], daily: [], chat: {}, exam: [] };
+const REG = { lesson: [], daily: [], home: [], chat: {}, exam: [] };
 function regWord(src, i, mIdx) {
   if (src === 'chat') return (REG.chat[mIdx] || [])[i];
   return (REG[src] || [])[i];
@@ -486,6 +490,23 @@ function updateHeader() {
 // ═══════════════════════════════════════════════════════════
 // DERSLER
 // ═══════════════════════════════════════════════════════════
+/** Tarihe göre günün ünitesi — tüm ünitelerde sırayla döner */
+function dailyUnit(dateKey) {
+  const units = [];
+  TOPIC_ORDER.forEach(k => (CONTENT[k]?.units || []).forEach((u, i) => units.push({ k, i })));
+  if (!units.length) return null;
+  return units[dayIndex(dateKey) % units.length];
+}
+
+/** Günde bir kez ana sayfayı o günün ünitesine getirir; gün içinde seçimine dokunmaz */
+function applyDailyUnit() {
+  const today = todayKey();
+  if (LS.get('eh_lessonDay', '') === today) return;
+  const du = dailyUnit(today);
+  if (du) { S.topicK = du.k; S.uIdx = du.i; }
+  LS.set('eh_lessonDay', today);
+}
+
 function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 function topicBar() {
@@ -533,12 +554,34 @@ function vocabCardHTML(w, i, src, cat) {
   </div>`;
 }
 
+function homeDailyStrip() {
+  const off = dailyOffline(todayKey());
+  REG.home = off.words;
+  return `<div class="home-daily">
+    <div class="hd-head"><span class="hd-title">🔤 Günün kelimeleri</span>
+      <span class="hd-sub">${esc(new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' }))} — her gün 5 yeni kelime</span>
+      <button class="btn-ghost btn-xs" data-act="switchTab" data-tab="daily">Günlük brifingin tamamı →</button></div>
+    <div class="hd-row">${off.words.map((w, i) => {
+      const saved = isSaved(w.en);
+      return `<div class="hd-card" style="border-left:3px solid ${getColor(w.cat)}">
+        <div class="hd-sv">${esc(w.en)}</div>
+        <div class="hd-tr">${esc(w.tr)}</div>
+        ${w.pron ? `<div class="hd-form">/${esc(w.pron)}/</div>` : ''}
+        <div class="hd-acts">
+          <button class="bt" data-act="speak" data-text="${attr(w.en)}">🔊</button>
+          <button class="bt ${saved ? 'saved' : ''}" data-act="saveWord" data-src="home" data-i="${i}" data-cat="${attr(w.cat)}">${saved ? '★' : '☆'}</button>
+        </div></div>`;
+    }).join('')}</div></div>`;
+}
+
 function renderLessons() {
   const topic = getTopic(), unit = getUnit(), lc = getColor(S.topicK);
   REG.lesson = unit.vocab;
+  const du = dailyUnit(todayKey());
+  const isToday = du && du.k === S.topicK && du.i === S.uIdx;
 
   const newsBox = `<div class="news-box" style="border-left-color:${lc}">
-    <div class="news-source" style="color:${lc}">${topic.icon} ${esc(topic.label)} — ${esc(unit.title)} ${pill('#555', unit.source, true)}</div>
+    <div class="news-source" style="color:${lc}">${topic.icon} ${esc(topic.label)} — ${esc(unit.title)} ${pill('#555', unit.source, true)}${isToday ? pill('var(--green)', 'Günün ünitesi', true) : ''}</div>
     <div class="news-text">${esc(unit.headline)}</div>
     <button class="news-listen" data-act="speak" data-text="${attr(unit.headline)}">🔊 Manşeti dinle</button>
   </div>`;
@@ -547,6 +590,7 @@ function renderLessons() {
     const cards = unit.vocab.map((w, i) => vocabCardHTML(w, i, 'lesson')).join('');
     const allSaved = unit.vocab.every(w => isSaved(w.en));
     return `<div class="fade-in">
+      ${homeDailyStrip()}
       <div class="topic-bar">${topicBar()}</div>
       ${unitTabsHTML()}${newsBox}
       <div class="vocab-grid">${cards}</div>
@@ -642,70 +686,179 @@ Object.assign(ACTIONS, {
 });
 
 // ═══════════════════════════════════════════════════════════
-// GÜNLÜK İÇERİK
+// GÜNLÜK BRİFİNG — her gün otomatik yenilenen içerik
 // ═══════════════════════════════════════════════════════════
+
 function noApiNotice(what) {
   return `<div class="no-api-notice">
     <h3>🔑 API Anahtarı Gerekli</h3>
     <p>${esc(what)} için Anthropic API anahtarını ekle.<br><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys</p>
-    <button class="btn-primary" style="max-width:220px;margin:12px auto 0" data-act="openSettings">Anahtarı Ekle</button>
-  </div>`;
+    <button class="btn-primary" style="max-width:220px;margin:12px auto 0" data-act="openSettings">Anahtarı Ekle</button></div>`;
 }
+
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function seededShuffle(arr, seed) { const r = mulberry32(seed >>> 0); const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/** Tüm sözlük: dersler + kürasyonlu liste (vocab.js) + kendi ürettiklerin */
+function allVocab(topics) {
+  const pool = (typeof dict === 'function') ? dict() : [];
+  if (!pool.length) {                       // ordlista.js yüklenmediyse: sadece dersler
+    const out = [], seen = new Set();
+    (topics || TOPIC_ORDER).forEach(k => (CONTENT[k]?.units || []).forEach(u => u.vocab.forEach(w => {
+      if (seen.has(w.en)) return;           // aynı kelime iki konuda geçebiliyor
+      seen.add(w.en);
+      out.push(Object.assign({}, w, { cat: k }));
+    })));
+    return out;
+  }
+  if (!topics) return pool;
+  const set = new Set(topics);
+  return pool.filter(w => set.has(w.cat));
+}
+
+
+function dayIndex(dateKey) { return Math.floor(Date.parse(dateKey + 'T00:00:00Z') / 86400000); }
+function rotate(pool, di, n, seedBase) {
+  if (!pool.length) return [];
+  const usable = Math.max(n, Math.floor(pool.length / n) * n);   // tam turlar
+  const cycle = Math.floor(di * n / usable);                     // kaçıncı tur
+  const p = seededShuffle(pool, ((seedBase ^ Math.imul(cycle, 2654435761)) >>> 0));
+  const start = (di * n) % usable;
+  return Array.from({ length: Math.min(n, p.length) }, (_, i) => p[(start + i) % p.length]);
+}
+
+/** Aynı gün hep aynı, ertesi gün başka — havuzun tamamı bitmeden hiçbir kelime tekrarlanmaz */
+function dailyOffline(dateKey) {
+  const di = dayIndex(dateKey);
+  const words = rotate(allVocab(['tip', 'vet', 'haberler', 'is', 'ielts', 'gramer']), di, 5, 0xC0FFEE);
+  const gramPool = seededShuffle(allVocab(['gramer']), 0x6A17E5);
+  const idiomPool = seededShuffle(allVocab(['idioms']), 0x1D10FA);
+  const gram = gramPool.length ? gramPool[di % gramPool.length] : null;
+  const idiom = idiomPool.length ? idiomPool[di % idiomPool.length] : null;
+  const phPool = (typeof PRO_PHRASES !== 'undefined' && PRO_PHRASES.length) ? seededShuffle(PRO_PHRASES, 0x9C0FFE) : [];
+  const phrase = phPool.length ? phPool[di % phPool.length] : null;
+  return { words, gram, idiom, phrase };
+}
+
+/** Dünkü kelimelerden yerel mini test (API gerekmez) */
+function recallQuiz(dateKey) {
+  const y = dailyOffline(dateKey).words.slice();
+  const cached = LS.get('eh_daily_' + dateKey, null);
+  (cached?.words || []).forEach(w => { if (w.en && w.tr) y.push(w); });
+  if (y.length < 4) return [];
+  const pool = allVocab().filter(w => w.tr);
+  const seed = hashStr('q' + dateKey);
+  return seededShuffle(y, seed).slice(0, 3).map((w, i) => {
+    const others = seededShuffle(pool.filter(x => x.tr !== w.tr), seed + i).slice(0, 3).map(x => x.tr);
+    return { en: w.en, a: w.tr, o: seededShuffle([w.tr, ...others], seed + 99 + i) };
+  });
+}
+
+const DAILY_TOPICS = ['Tıp', 'Veteriner', 'Bilim & Teknoloji', 'Çevre', 'Sağlık Politikası', 'Küresel Haber', 'İş Hayatı'];
 
 function renderDaily() {
   const todayStr = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const head = (btn) => `<div class="daily-header">
-    <div><h2 class="pane-h2">📰 Günlük İçerik</h2><div class="daily-date">${esc(todayStr)}</div></div>${btn}</div>`;
+  const key = todayKey();
+  const off = dailyOffline(key);
+  const ai = LS.get('eh_daily_' + key, null);
+  const custom = LS.get('eh_daily_custom_' + key, null);
+  REG.daily = (ai?.words || []).concat(off.words);
 
-  if (!S.cfg.apiKey) return `<div class="fade-in">${head('')}${noApiNotice('Günlük AI içeriği')}</div>`;
+  const head = `<div class="daily-header">
+    <div><h2 class="pane-h2">📰 Günlük İçerik</h2><div class="daily-date">${esc(todayStr)}</div></div>
+    <div class="daily-head-btns">
+      ${S.cfg.apiKey ? `<button class="daily-generate-btn" data-act="genDaily" data-force="1">${ai ? '🔄 Yeni AI içeriği' : '✨ AI içeriği'}</button>` : ''}
+    </div></div>`;
 
-  const cached = LS.get('eh_daily_' + todayKey(), null);
   if (S.dailyLoading) {
-    return `<div class="fade-in">${head('')}
-      <div class="ai-loading"><div class="ai-loading-dots"><span></span><span></span><span></span></div><span>AI bugünkü gazeteyi hazırlıyor...</span></div></div>`;
+    return `<div class="fade-in">${head}<div class="ai-loading"><div class="ai-loading-dots"><span></span><span></span><span></span></div><span>AI bugünkü gazeteyi hazırlıyor...</span></div>${offlineSections(off)}</div>`;
   }
-  if (cached) return renderDailyContent(cached, todayStr);
 
-  return `<div class="fade-in">${head('<button class="daily-generate-btn" data-act="genDaily">✨ Bugünkü İçeriği Oluştur</button>')}
-    <div class="daily-empty">
-      <div style="font-size:48px;margin-bottom:14px">🗞️</div>
-      <p>AI her gün senin için yeni bir haber, özet ve 6 yeni kelime üretir.<br>Kelimeler doğrudan haznene ve tekrar programına eklenebilir.</p>
-    </div>
-    <div class="daily-topic-row">
-      ${['Tıp', 'Veteriner', 'Bilim & Teknoloji', 'Çevre', 'Sağlık Politikası', 'Küresel Haber'].map(t => `<button class="chat-topic-chip" data-act="genDaily" data-topic="${attr(t)}">${esc(t)}</button>`).join('')}
-    </div>
-  </div>`;
+  const aiPart = ai ? renderDailyAI(ai) : (S.cfg.apiKey
+    ? `<div class="daily-empty"><div style="font-size:40px;margin-bottom:10px">🗞️</div>
+        <p>Bugünün AI haberi ve kelimeleri henüz üretilmedi.<br>Uygulamayı her gün açtığında otomatik gelir; şimdi istersen bir konu seç.</p>
+        <div class="daily-topic-row" style="margin-top:14px">${DAILY_TOPICS.map(t => `<button class="chat-topic-chip" data-act="genDaily" data-force="1" data-topic="${attr(t)}">${esc(t)}</button>`).join('')}</div></div>`
+    : `<div class="daily-empty"><p>🔑 AI haberi ve günlük özel promptun için ⚙️ Ayarlar'dan API anahtarı ekle.<br>Aşağıdaki bölümler anahtarsız da her gün değişir.</p></div>`);
+
+  return `<div class="fade-in">${head}${aiPart}${offlineSections(off)}${customSection(custom)}${recallSection()}</div>`;
 }
 
-function renderDailyContent(c, todayStr) {
-  REG.daily = c.words || [];
+function offlineSections(off) {
+  const base = (LS.get('eh_daily_' + todayKey(), null)?.words || []).length;
+  const cards = off.words.map((w, i) => vocabCardHTML(w, base + i, 'daily', w.cat)).join('');
+  const g = off.gram, id = off.idiom, ph = off.phrase;
+  return `
+    <h3 class="pane-h3">🔤 Günün kelimeleri <span class="pane-sub">— her gün 5 farklı kelime, haznenden bağımsız</span></h3>
+    <div class="vocab-grid">${cards}</div>
+
+    <div class="daily-trio">
+      ${g ? `<div class="panel dt-card" style="border-left:4px solid var(--purple)">
+        <div class="panel-title">✏️ Günün grameri</div>
+        <div class="dt-main">${esc(g.en)}</div>
+        <div class="dt-tr">${esc(g.tr)}</div>
+        ${g.ex ? `<div class="dt-ex">"${esc(g.ex)}"<button class="bt" data-act="speak" data-text="${attr(g.ex)}">🔊</button></div>` : ''}
+        ${g.tip ? `<div class="dt-tip">💡 ${esc(g.tip)}</div>` : ''}</div>` : ''}
+
+      ${id ? `<div class="panel dt-card" style="border-left:4px solid var(--gold)">
+        <div class="panel-title">🗣️ Günün deyimi</div>
+        <div class="dt-main">${esc(id.en)}</div>
+        <div class="dt-tr">${esc(id.tr)}</div>
+        ${id.ex ? `<div class="dt-ex">"${esc(id.ex)}"<button class="bt" data-act="speak" data-text="${attr(id.ex)}">🔊</button></div>` : ''}
+        ${id.tip ? `<div class="dt-tip">💡 ${esc(id.tip)}</div>` : ''}</div>` : ''}
+
+      ${ph ? `<div class="panel dt-card" style="border-left:4px solid var(--red)">
+        <div class="panel-title">🩺 Günün mesleki ifadesi <span style="font-weight:500;color:var(--muted)">— ${esc(ph.ctx)}</span></div>
+        <div class="dt-main">${esc(ph.en)}</div>
+        <div class="dt-tr">${esc(ph.tr)}</div>
+        ${ph.tip ? `<div class="dt-tip">💡 ${esc(ph.tip)}</div>` : ''}
+        <div class="dt-ex"><button class="bt" data-act="speak" data-text="${attr(ph.en)}">🔊 Dinle</button>
+          <button class="bt" data-act="dailySavePhrase">★ Hazneye</button></div></div>` : ''}
+    </div>`;
+}
+
+function renderDailyAI(c) {
   const tc = /vet/i.test(c.topic || '') ? 'var(--orange)' : /tıp|medic|health/i.test(c.topic || '') ? 'var(--red)' : 'var(--teal)';
   const cards = (c.words || []).map((w, i) => vocabCardHTML(w, i, 'daily', mapCat(w.cat))).join('');
-  const qz = (c.quiz || []).length ? `<div class="daily-quiz">
-    <h3 class="pane-h3">Hızlı Kontrol</h3>
-    ${c.quiz.map((q, i) => `<div class="dq-item">
-      <div class="dq-q">${i + 1}. ${esc(q.q)}</div>
+  const qz = (c.quiz || []).length ? `<div class="daily-quiz"><h3 class="pane-h3">Hızlı Kontrol</h3>
+    ${c.quiz.map((q, i) => `<div class="dq-item"><div class="dq-q">${i + 1}. ${esc(q.q)}</div>
       <div class="dq-opts">${(q.o || []).map(o => `<button class="dq-opt" data-act="dailyAnswer" data-q="${i}" data-v="${attr(o)}">${esc(o)}</button>`).join('')}</div>
-      <div class="dq-fb hidden" id="dqfb${i}"></div>
-    </div>`).join('')}
-  </div>` : '';
-
-  return `<div class="fade-in">
-    <div class="daily-header">
-      <div><h2 class="pane-h2">📰 Günlük İçerik</h2><div class="daily-date">${esc(todayStr)}</div></div>
-      <button class="daily-generate-btn" data-act="genDaily" data-force="1">🔄 Yenile</button>
-    </div>
-    <div class="daily-news-card" style="border-left-color:${tc}">
+      <div class="dq-fb hidden" id="dqfb${i}"></div></div>`).join('')}</div>` : '';
+  return `<div class="daily-news-card" style="border-left-color:${tc}">
       <div class="daily-news-source">${esc(c.source || '')} — ${esc(c.topic || '')}</div>
       <div class="daily-news-headline">${esc(c.headline || '')}</div>
       <div class="daily-news-body">${esc(c.summary || '')}</div>
       ${c.tr_summary ? `<div class="daily-tr">🇹🇷 ${esc(c.tr_summary)}</div>` : ''}
       <button class="news-listen" data-act="speak" data-text="${attr((c.headline || '') + '. ' + (c.summary || ''))}">🔊 Haberi dinle</button>
     </div>
-    <h3 class="pane-h3">Bugünkü Kelimeler</h3>
-    <div class="vocab-grid">${cards}</div>
-    ${qz}
-  </div>`;
+    <h3 class="pane-h3">🤖 Günün AI kelimeleri</h3><div class="vocab-grid">${cards}</div>${qz}`;
+}
+
+function customSection(out) {
+  if (!S.cfg.dailyPrompt) {
+    return `<div class="panel custom-empty">
+      <div class="panel-title">⚡ Günlük özel promptun</div>
+      <div class="panel-hint">Cowork'te her gün çalıştırdığın promptu ⚙️ <b>Ayarlar → Çalışma → Günlük özel prompt</b> alanına yapıştır. Uygulama her gün onu çalıştırıp sonucunu tam burada gösterir.</div>
+      <button class="btn-ghost btn-xs" style="margin-top:10px" data-act="openSettings">Promptu ekle</button></div>`;
+  }
+  if (S.customLoading) return `<div class="panel"><div class="panel-title">⚡ Günlük özel promptun</div>
+    <div class="ai-loading"><div class="ai-loading-dots"><span></span><span></span><span></span></div><span>Çalıştırılıyor...</span></div></div>`;
+  return `<div class="panel custom-panel">
+    <div class="panel-title">⚡ Günlük özel promptun
+      <button class="bt" style="margin-left:auto" data-act="runCustom" data-force="1">🔄 Yenile</button></div>
+    ${out ? `<div class="custom-out">${md(out)}</div>`
+      : `<div class="panel-hint">Bugün henüz çalıştırılmadı.<button class="btn-ghost btn-xs" style="margin-left:10px" data-act="runCustom">▶ Çalıştır</button></div>`}</div>`;
+}
+
+function recallSection() {
+  const yKey = dayKeyOffset(-1);
+  const qs = recallQuiz(yKey);
+  if (!qs.length) return '';
+  return `<div class="panel"><div class="panel-title">🔁 Dünün tekrarı <span style="font-weight:500;color:var(--muted)">— hatırlıyor musun?</span></div>
+    ${qs.map((q, i) => `<div class="dq-item"><div class="dq-q">${i + 1}. <b>${esc(q.en)}</b> ne demek?
+        <button class="bt" data-act="speak" data-text="${attr(q.en)}">🔊</button></div>
+      <div class="dq-opts">${q.o.map(o => `<button class="dq-opt" data-act="recallAnswer" data-q="${i}" data-v="${attr(o)}" data-a="${attr(q.a)}">${esc(o)}</button>`).join('')}</div>
+      <div class="dq-fb hidden" id="rcfb${i}"></div></div>`).join('')}</div>`;
 }
 
 function mapCat(c) {
@@ -721,13 +874,11 @@ Object.assign(ACTIONS, {
     S.dailyLoading = true; renderTab('daily');
     try {
       const todayStr = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const content = await callJSON(DAILY_SYSTEM_PROMPT, [{
-        role: 'user',
-        content: `Bugünün tarihi: ${todayStr}. Kullanıcı seviyesi: ${S.cfg.level}. ${d.topic ? `Konu: ${d.topic}.` : 'Konuyu sen seç (tıp/veteriner/bilim/çevre arasından).'} Bir haber, özet, 6 kelime ve 3 soruluk mini quiz üret. Sadece JSON döndür.`
-      }], { maxTokens: 2000 });
+      const seen = LS.get('eh_seen_topics', []).slice(-7).join(', ');
+      const content = await callJSON(DAILY_SYSTEM_PROMPT, [{ role: 'user', content: `Bugünün tarihi: ${todayStr}. Kullanıcı seviyesi: ${S.cfg.level}. ${d.topic ? `Konu: ${d.topic}.` : 'Konuyu sen seç.'}${seen ? ` Şu konular son günlerde kullanıldı, tekrarlama: ${seen}.` : ''} Bir haber, özet, 6 kelime ve 3 soruluk mini quiz üret. Sadece JSON.` }], { maxTokens: 2000 });
       LS.set('eh_daily_' + key, content);
-      addXP(10);
-      showToast('Günlük gazeten hazır! +10 XP 🎉', 'success');
+      const seenList = LS.get('eh_seen_topics', []); seenList.push(content.topic || ''); LS.set('eh_seen_topics', seenList.slice(-14));
+      addXP(10); showToast('Günlük gazeten hazır! +10 XP 🎉', 'success');
       pruneDailyCache();
     } catch (e) {
       showToast(e.message === 'NO_API_KEY' ? 'Önce API anahtarını ekle' : e.message, 'error');
@@ -735,19 +886,52 @@ Object.assign(ACTIONS, {
     }
     S.dailyLoading = false; renderTab('daily');
   },
+  runCustom: async (d) => {
+    if (!S.cfg.dailyPrompt || !S.cfg.apiKey) { openSettings(); return; }
+    const key = todayKey();
+    if (!d.force && LS.get('eh_daily_custom_' + key, null)) { renderTab('daily'); return; }
+    S.customLoading = true; renderTab('daily');
+    try {
+      const todayStr = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const out = await callAPI(CUSTOM_DAILY_SYSTEM, [{ role: 'user', content: `Bugünün tarihi: ${todayStr}. Kullanıcının seviyesi ${S.cfg.level}, hedef IELTS bandı ${S.cfg.targetBand}.\n\nTALİMAT:\n"""\n${S.cfg.dailyPrompt}\n"""` }], { maxTokens: 2000 });
+      LS.set('eh_daily_custom_' + key, out);
+      addXP(5);
+    } catch (e) { showToast(e.message, 'error'); }
+    S.customLoading = false; renderTab('daily');
+  },
   dailyAnswer: (d, el) => {
     const c = LS.get('eh_daily_' + todayKey(), null); if (!c) return;
-    const q = c.quiz[+d.q]; const fb = document.getElementById('dqfb' + d.q);
-    const ok = d.v === q.a;
+    const q = c.quiz[+d.q], fb = document.getElementById('dqfb' + d.q), ok = d.v === q.a;
     el.parentElement.querySelectorAll('.dq-opt').forEach(b => { b.disabled = true; if (b.dataset.v === q.a) b.classList.add('correct'); else if (b === el) b.classList.add('wrong'); });
     if (fb) { fb.className = 'dq-fb ' + (ok ? 'ok' : 'no'); fb.textContent = ok ? '✓ Doğru!' : `✗ Doğrusu: ${q.a}` + (q.why ? ` — ${q.why}` : ''); }
     if (ok) addXP(2);
   },
+  recallAnswer: (d, el) => {
+    const fb = document.getElementById('rcfb' + d.q), ok = d.v === d.a;
+    el.parentElement.querySelectorAll('.dq-opt').forEach(b => { b.disabled = true; if (b.dataset.v === d.a) b.classList.add('correct'); else if (b === el) b.classList.add('wrong'); });
+    if (fb) { fb.className = 'dq-fb ' + (ok ? 'ok' : 'no'); fb.textContent = ok ? '✓ Doğru!' : `✗ Doğrusu: ${d.a}`; }
+    if (ok) addXP(2);
+  },
+  dailySavePhrase: () => {
+    const ph = dailyOffline(todayKey()).phrase; if (!ph) return;
+    saveWordObj({ en: ph.en, tr: ph.tr, pron: '', ex: ph.en, tip: ph.tip || `Kullanım: ${ph.ctx}` }, 'tip');
+  },
 });
 
 function pruneDailyCache() {
-  const keep = new Set([0, -1, -2, -3, -4, -5, -6].map(n => 'eh_daily_' + dayKeyOffset(n)));
+  const keep = new Set();
+  for (let i = 0; i >= -6; i--) { keep.add('eh_daily_' + dayKeyOffset(i)); keep.add('eh_daily_custom_' + dayKeyOffset(i)); }
   LS.keys().filter(k => k.startsWith('eh_daily_') && !keep.has(k)).forEach(LS.del);
+}
+
+/** Günde bir kez, sessizce otomatik üret */
+async function maybeAutoDaily() {
+  if (!S.cfg.apiKey) return;
+  const key = todayKey();
+  if (LS.get('eh_auto_' + key, false)) return;
+  LS.set('eh_auto_' + key, true);
+  if (!LS.get('eh_daily_' + key, null)) await ACTIONS.genDaily({ force: '' });
+  if (S.cfg.dailyPrompt && !LS.get('eh_daily_custom_' + key, null)) await ACTIONS.runCustom({ force: '' });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -870,7 +1054,19 @@ function bankGridHTML() {
   }).join('')}</div>`;
 }
 
+function bankModeBar() {
+  const total = (typeof dict === 'function') ? dict().length : 0;
+  return `<div class="seg-row">
+    ${[['mine', `⭐ Haznem (${S.bank.length})`], ['browse', `📕 Tüm sözlük (${total})`], ['create', '⚡ Üret & içe aktar']]
+      .map(([k, l]) => `<button class="seg-btn ${S.bMode === k ? 'active' : ''}" data-act="setBMode" data-m="${k}">${esc(l)}</button>`).join('')}
+  </div>`;
+}
+
 function renderBank() {
+  if (S.bMode === 'browse') return `<div class="fade-in">
+    <div class="section-head"><h2>📚 Kelime Haznem</h2></div>${bankModeBar()}${window.Ordlista ? Ordlista.renderBrowse() : ''}</div>`;
+  if (S.bMode === 'create') return `<div class="fade-in">
+    <div class="section-head"><h2>📚 Kelime Haznem</h2></div>${bankModeBar()}${window.Ordlista ? Ordlista.renderCreate() : ''}</div>`;
   const counts = ['tip', 'vet', 'haberler', 'idioms', 'ielts', 'gramer', 'is'].map(c => [CAT_LABELS[c], S.bank.filter(w => w.cat === c).length, getColor(c)]);
   const stats = [['Toplam', S.bank.length, 'var(--gold)'], ...counts]
     .map(([l, n, c]) => `<div class="bank-stat-item"><span class="bank-stat-num" style="color:${c}">${n}</span><span class="bank-stat-lbl">${esc(l)}</span></div>`).join('');
@@ -883,6 +1079,7 @@ function renderBank() {
       <span class="badge" style="background:var(--teal)">${S.bank.length} kelime</span>
       ${S.bank.length ? `<button class="btn-primary btn-xs" style="margin-left:auto" data-act="switchTab" data-tab="review">🔁 Tekrar Et</button>` : ''}
     </div>
+    ${bankModeBar()}
     <div class="bank-stats-row">${stats}</div>
     <div class="filter-row">
       <input class="search-input" id="bankSearch" placeholder="Kelime ara..." value="${attr(S.bSrch)}" data-inp="setBSrch" autocomplete="off">
@@ -898,6 +1095,7 @@ function renderBank() {
 }
 
 Object.assign(ACTIONS, {
+  setBMode: (d) => { S.bMode = d.m; renderTab('bank'); },
   setBFil: (d) => { S.bFil = d.f; renderTab('bank'); },
   setBSort: (d, el) => { S.bSort = el.value; document.getElementById('bankGrid').innerHTML = bankGridHTML(); },
   setBSrch: (d, el) => { S.bSrch = el.value; const g = document.getElementById('bankGrid'); if (g) g.innerHTML = bankGridHTML(); },
@@ -1011,6 +1209,7 @@ function openSettings() {
   document.getElementById('modelSelect').value = S.cfg.model;
   document.getElementById('levelSelect').value = S.cfg.level;
   document.getElementById('targetBandInput').value = S.cfg.targetBand;
+  document.getElementById('dailyPromptInput').value = S.cfg.dailyPrompt || '';
   document.getElementById('autoSpeakChk').checked = !!S.cfg.autoSpeak;
   document.getElementById('autoListenChk').checked = !!S.cfg.autoListen;
   document.getElementById('correctChk').checked = !!S.cfg.autoCorrect;
@@ -1053,6 +1252,7 @@ function saveSettings() {
   S.cfg.model = document.getElementById('modelSelect').value;
   S.cfg.level = document.getElementById('levelSelect').value;
   S.cfg.targetBand = document.getElementById('targetBandInput').value;
+  S.cfg.dailyPrompt = document.getElementById('dailyPromptInput').value.trim();
   S.cfg.autoSpeak = document.getElementById('autoSpeakChk').checked;
   S.cfg.autoListen = document.getElementById('autoListenChk').checked;
   S.cfg.autoCorrect = document.getElementById('correctChk').checked;
@@ -1063,7 +1263,13 @@ function saveSettings() {
   renderTab(S.tab);
   updateHeader();
 }
-Object.assign(ACTIONS, { setGoal2: (d) => { S.cfg.dailyGoal = +d.n; saveCfg(); openSettings(); updateHeader(); } });
+Object.assign(ACTIONS, {
+  loadVetPackage: () => {
+    document.getElementById('dailyPromptInput').value = (typeof VET_DAILY_PACKAGE !== 'undefined') ? VET_DAILY_PACKAGE : '';
+    showToast('Hazır paket yüklendi — Kaydet ile onayla', 'success');
+  },
+  clearDailyPrompt: () => { document.getElementById('dailyPromptInput').value = ''; },
+  setGoal2: (d) => { S.cfg.dailyGoal = +d.n; saveCfg(); openSettings(); updateHeader(); } });
 
 function renderDataStats() {
   const bytes = LS.keys().reduce((s, k) => s + (localStorage.getItem(k) || '').length, 0);
@@ -1149,6 +1355,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('rateVal').textContent = S.cfg.rate.toFixed(2);
   });
   if (!S.cfg.apiKey) setTimeout(openSettings, 700);
+  else setTimeout(() => { maybeAutoDaily().catch(() => {}); }, 1200);
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
