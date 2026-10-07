@@ -39,7 +39,7 @@ const S = {
   // ayarlar
   cfg: Object.assign({
     apiKey: '', workspaceId: '', model: 'claude-haiku-4-5-20251001', voiceURI: '', rate: 0.85,
-    autoSpeak: false, autoListen: false, dailyGoal: 5, level: 'B1',
+    autoSpeak: false, autoListen: false, dailyGoal: 20, level: 'B1',
     targetBand: '6.5', autoCorrect: true, dailyPrompt: null,
   }, LS.get('eh_cfg', {})),
   settingsTab: 'api',
@@ -63,6 +63,8 @@ function saveCompleted() { LS.set('eh_completed', S.completed); }
 
 // Kullanımdan kalkan modeller → güncel karşılıkları.
 // Eski seçim localStorage'da kalmış olabilir (ör. Opus 4.1, 5 Ağustos 2026'da kapatıldı → 404 hatası).
+// Günlük kelime hedefi en az 20 (kullanıcı isteği)
+if ((+S.cfg.dailyGoal || 0) < 20) { S.cfg.dailyGoal = 20; saveCfg(); }
 (function migrateModel() {
   const RETIRED = {
     'claude-opus-4-1-20250805': 'claude-opus-5-5',
@@ -540,7 +542,7 @@ function pill(color, txt, sm) {
 
 function updateHeader() {
   const saved = todaySavedCount();
-  const goal = S.cfg.dailyGoal || 5;
+  const goal = S.cfg.dailyGoal || 20;
   const pct = Math.min(100, Math.round((saved / goal) * 100));
   const fill = document.getElementById('goalFill');
   if (fill) { fill.style.width = pct + '%'; fill.style.background = pct >= 100 ? 'var(--green)' : 'var(--gold)'; }
@@ -628,6 +630,7 @@ function vocabCardHTML(w, i, src, cat) {
 }
 
 function homeDailyStrip() {
+  if (window.DailyWords) return DailyWords.homeStrip();
   const off = dailyOffline(todayKey());
   REG.home = off.words;
   return `<div class="home-daily">
@@ -649,6 +652,7 @@ function homeDailyStrip() {
 
 function renderLessons() {
   if (S.gOpen && window.Grammar) return Grammar.render();
+  if (S.dwOpen && window.DailyWords) { const h = DailyWords.render(); if (h) return h; }
   const topic = getTopic(), unit = getUnit(), lc = getColor(S.topicK);
   REG.lesson = unit.vocab;
   const du = dailyUnit(todayKey());
@@ -806,7 +810,7 @@ function rotate(pool, di, n, seedBase) {
 /** Aynı gün hep aynı, ertesi gün başka — havuzun tamamı bitmeden hiçbir kelime tekrarlanmaz */
 function dailyOffline(dateKey) {
   const di = dayIndex(dateKey);
-  const words = rotate(allVocab(['tip', 'vet', 'haberler', 'is', 'ielts', 'gramer']), di, 5, 0xC0FFEE);
+  const words = window.DailyWords ? DailyWords.words(dateKey) : rotate(allVocab(['tip', 'vet', 'haberler', 'is', 'ielts', 'gramer']), di, 5, 0xC0FFEE);
   const gramPool = seededShuffle(allVocab(['gramer']), 0x6A17E5);
   const idiomPool = seededShuffle(allVocab(['idioms']), 0x1D10FA);
   const gram = gramPool.length ? gramPool[di % gramPool.length] : null;
@@ -824,7 +828,7 @@ function recallQuiz(dateKey) {
   if (y.length < 4) return [];
   const pool = allVocab().filter(w => w.tr);
   const seed = hashStr('q' + dateKey);
-  return seededShuffle(y, seed).slice(0, 3).map((w, i) => {
+  return seededShuffle(y, seed).slice(0, 8).map((w, i) => {
     const others = seededShuffle(pool.filter(x => x.tr !== w.tr), seed + i).slice(0, 3).map(x => x.tr);
     return { en: w.en, a: w.tr, o: seededShuffle([w.tr, ...others], seed + 99 + i) };
   });
@@ -864,7 +868,7 @@ function offlineSections(off) {
   const cards = off.words.map((w, i) => vocabCardHTML(w, base + i, 'daily', w.cat)).join('');
   const g = off.gram, id = off.idiom, ph = off.phrase;
   return `
-    <h3 class="pane-h3">🔤 Günün kelimeleri <span class="pane-sub">— her gün 5 farklı kelime, haznenden bağımsız</span></h3>
+    <h3 class="pane-h3">🔤 Günün kelimeleri <span class="pane-sub">— her gün ${off.words.length} yeni kelime · ana sayfadaki testle öğren</span></h3>
     <div class="vocab-grid">${cards}</div>
 
     <div class="daily-trio">
@@ -1221,7 +1225,7 @@ function renderProgress() {
     </div>`;
   }).join('');
 
-  const goalChips = [3, 5, 10, 15, 20].map(n => `<button class="goal-chip ${S.cfg.dailyGoal === n ? 'active' : ''}" data-act="setGoal" data-n="${n}">${n}</button>`).join('');
+  const goalChips = [20, 25, 30, 40].map(n => `<button class="goal-chip ${S.cfg.dailyGoal === n ? 'active' : ''}" data-act="setGoal" data-n="${n}">${n}</button>`).join('');
   const saved = todaySavedCount(), goalPct = Math.min(100, Math.round((saved / S.cfg.dailyGoal) * 100));
 
   return `<div class="fade-in">
@@ -1294,7 +1298,7 @@ function openSettings() {
   document.getElementById('micSupportNote').innerHTML = Mic.supported
     ? '🎙️ Mikrofon tanıma destekleniyor. Sesli sohbet ve Speaking pratiği kullanılabilir.'
     : '⚠️ Bu cihazda konuşma tanıma yok — mikrofonla konuşma çalışmaz. <b>iPhone/iPad\'de hiçbir tarayıcıda çalışmaz</b> (Chrome dahil), bu Apple kısıtlaması. Android Chrome ve masaüstü Chrome/Edge destekler.<br>Seslendirme (dinleme) her cihazda çalışır; Speaking pratiğini yazarak da yapabilirsin.';
-  document.getElementById('goalChipsSettings').innerHTML = [3, 5, 10, 15, 20].map(n =>
+  document.getElementById('goalChipsSettings').innerHTML = [20, 25, 30, 40].map(n =>
     `<button class="goal-chip ${S.cfg.dailyGoal === n ? 'active' : ''}" data-act="setGoal2" data-n="${n}">${n} kelime</button>`).join('');
   renderDataStats();
   m.classList.remove('hidden');
