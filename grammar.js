@@ -181,7 +181,7 @@
     const A = M.authority; if (!A) return '';
     return `<div class="g-sa">
       <div class="g-sa-h">📘 ${esc(A.name)} — bu konunun yetkili kaynağı</div>
-      ${(l.sa || []).map(r => `<a class="g-sa-ref" href="${attr(r.url)}" target="_blank" rel="noopener"><span>${saRefLabel(r)}</span><small>bölüm s. ${esc(r.pages)} · PDF ↗</small></a>`).join('')}
+      ${(l.sa || []).map(r => `<a class="g-sa-ref" href="${attr(r.url)}" target="_blank" rel="noopener"><span>${saRefLabel(r)}</span><small>s. ${esc(r.pages)} · PDF ↗</small></a>`).join('')}
       <a class="g-sa-ref" href="${attr(A.saol)}" target="_blank" rel="noopener"><span><b>SAOL</b> · kelime çekimi ve yazım</span><small>svenska.se ↗</small></a>
       <div class="g-sa-note">${esc(A.note)}</div>
     </div>`;
