@@ -176,6 +176,22 @@
       <tbody>${t.rows.map(r => `<tr>${r.map(c => `<td>${inl(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
 
+  function saRefLabel(r) { return `SAG ${r.vol} (${esc(r.volName)}) · kap. ${esc(r.kap)}${r.par ? ` · ${esc(r.par)}` : ''}`; }
+  function saBox(l) {
+    const A = M.authority; if (!A) return '';
+    return `<div class="g-sa">
+      <div class="g-sa-h">📘 ${esc(A.name)} — bu konunun yetkili kaynağı</div>
+      ${(l.sa || []).map(r => `<a class="g-sa-ref" href="${attr(r.url)}" target="_blank" rel="noopener"><span>${saRefLabel(r)}</span><small>bölüm s. ${esc(r.pages)} · PDF ↗</small></a>`).join('')}
+      <a class="g-sa-ref" href="${attr(A.saol)}" target="_blank" rel="noopener"><span><b>SAOL</b> · kelime çekimi ve yazım</span><small>svenska.se ↗</small></a>
+      <div class="g-sa-note">${esc(A.note)}</div>
+    </div>`;
+  }
+  function saSources(l) {
+    const A = M.authority; if (!A) return '';
+    return (l.sa || []).map(r => `<li><a href="${attr(r.url)}" target="_blank" rel="noopener">Svenska Akademiens grammatik ${r.vol} (${esc(r.volName)}), kap. ${esc(r.kap)}${r.par ? `, ${esc(r.par)}` : ''}, s. ${esc(r.pages)}</a> <span class="g-sa-badge">Svenska Akademien</span></li>`).join('')
+      + `<li><a href="${attr(A.saol)}" target="_blank" rel="noopener">Svenska Akademiens ordlista (SAOL), svenska.se</a> <span class="g-sa-badge">Svenska Akademien</span></li>`;
+  }
+
   function viewLesson() {
     const l = BYID[V.id];
     if (!l) { V.view = 'today'; return viewToday(); }
@@ -186,6 +202,7 @@
         <h2 class="g-title">${esc(l.title)}</h2>
         <div class="g-sub">${esc(l.titleTr)}</div>
         <p class="g-summary">${inl(l.summary)}</p>
+        ${saBox(l)}
         <div class="g-toc">${l.sections.map((s, i) => `<a href="#gsec${i}" data-act="gJump" data-i="${i}">${i + 1}. ${esc(s.h)}</a>`).join('')}<a href="#gpit" data-act="gJump" data-i="pit">⚠️ Tipik hatalar</a></div>
         ${l.sections.map((s, i) => `<div class="panel g-sec" id="gsec${i}">
           <div class="g-sec-h"><span class="g-sec-n">${i + 1}</span>${esc(s.h)}</div>
@@ -200,8 +217,8 @@
         </div>
         ${l.tips.length ? `<div class="panel g-tips"><div class="panel-title">🧠 Akılda tutma ipuçları</div><ul class="md-ul">${l.tips.map(t => `<li>${inl(t)}</li>`).join('')}</ul></div>` : ''}
         <div class="panel g-src"><div class="panel-title">📚 Kaynaklar</div>
-          <ol>${l.sources.map(s => `<li><a href="${attr(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a></li>`).join('')}</ol>
-          <div class="panel-hint">Ders bu kaynaklardaki kurallara dayanarak hazırlandı ve bağımsız olarak kontrol edildi.</div></div>
+          <ol>${saSources(l)}${l.sources.map(s => `<li><a href="${attr(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a></li>`).join('')}</ol>
+          <div class="panel-hint">${M.authority ? esc(M.authority.srcNote) : 'Ders bu kaynaklardaki kurallara dayanarak hazırlandı ve bağımsız olarak kontrol edildi.'}</div></div>
         <div class="g-cta">
           <button class="btn-primary" data-act="gStart" data-id="${attr(l.id)}">✍️ Alıştırmalara başla (${l.exercises.length} soru)</button>
           ${hasKey() ? `<button class="btn-ghost" data-act="gAI" data-id="${attr(l.id)}">🤖 AI ile 8 yeni alıştırma</button>` : ''}
@@ -345,7 +362,7 @@ Kurallar:
 - Dağılım: 3 mc, 3 gap, 1 fix, 1 order. Kolaydan zora.
 - Cevaplar tek anlamlı olsun; dilbilgisi kusursuz ve doğal olsun. Her alıştırmada "ex" = 1-2 cümle Türkçe açıklama.
 - Bağlam: veteriner kliniği, sağlık, günlük hayat.
-- Dersteki mevcut sorulara benzemesin.
+- Dersteki mevcut sorulara benzemesin.${M.norm ? '\n- ' + M.norm : ''}
 Çıktı: {"exercises":[{"type":"mc","q":"…","o":["…"],"a":0,"ex":"…"}, …]}`;
     const user = `Konu: ${l.title} (${l.titleTr}), seviye ${l.level}.\nÖzet: ${l.summary}\nDersin bölümleri: ${l.sections.map(s => s.h).join(' | ')}\nMevcut sorular (tekrarlama): ${l.exercises.map(e => e.q || e.a).slice(0, 16).join(' || ')}`;
     const res = await callJSON(sys, [{ role: 'user', content: user }], { maxTokens: 3000 });
@@ -424,7 +441,7 @@ Kurallar:
     gAsk: () => {
       const r = V.run, x = r.results[r.results.length - 1], l = BYID[r.items[r.i].lessonId];
       const userAns = x.ex.type === 'mc' ? x.ex.o[+x.user] : x.user;
-      const q = `Gramer sorusu (${l.title} / ${l.titleTr}): "${x.ex.q || x.ex.words?.join(' / ')}". Benim cevabım: "${userAns || '(boş)'}". Doğru cevap: "${correctText(x.ex)}". Benim cevabım neden yanlış? Kuralı kısaca, örnekle açıkla.`;
+      const q = `Gramer sorusu (${l.title} / ${l.titleTr}): "${x.ex.q || x.ex.words?.join(' / ')}". Benim cevabım: "${userAns || '(boş)'}". Doğru cevap: "${correctText(x.ex)}". Benim cevabım neden yanlış? Kuralı kısaca, örnekle açıkla.${M.askNorm ? ' ' + M.askNorm : ''}`;
       switchTab('chat'); setTimeout(() => window.Chat?.send(q), 150);
     },
   });

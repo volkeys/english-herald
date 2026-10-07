@@ -812,3 +812,12 @@ button, .nav-btn, .filter-chip, .bt, .seg-btn{ -webkit-tap-highlight-color:trans
   .g-home-btn{margin-left:0;width:100%}
   .g-stat b{font-size:17px}
 }
+.g-sa{border:1.5px solid var(--gold);background:rgba(232,194,74,.07);border-radius:var(--radius);padding:12px 14px;margin:0 0 16px}
+.g-sa-h{font-weight:800;font-size:14px;margin-bottom:8px}
+.g-sa-ref{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid var(--border);color:var(--text);font-size:13px}
+.g-sa-ref:first-of-type{border-top:none}
+.g-sa-ref small{color:var(--muted);white-space:nowrap;font-size:11px}
+.g-sa-ref:hover span{color:var(--gold)}
+.g-sa-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
+.g-sa-badge{display:inline-block;font-size:10px;font-weight:700;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 5px;margin-left:4px;vertical-align:middle}
+@media(max-width:640px){.g-sa-ref{flex-direction:column;gap:2px}}
