@@ -123,6 +123,21 @@ kriterlerin en zayıftan en güçlüye sıralanması.
 
 ---
 
+## ✏️ Gramer — ayrıntılı dersler ve günlük çalışma
+
+**Dersler** sekmesinin en üstündeki **"Günün grameri"** kartı her gün bir konu açar:
+1. **Dersi oku:** kural, alt kurallar, istisnalar, çekim tabloları, sesli örnekler, Türkçe konuşanların tipik hataları ve kaynaklar
+2. **Alıştırmalar:** çoktan seçmeli, boşluk doldurma, kelime dizme ve hata düzeltme; hepsi otomatik puanlanır
+3. **Tekrar:** çözdüğün sorular aralıklı tekrar havuzuna girer (doğru → 2, 4, 8, 16… gün sonra; yanlış → ertesi gün)
+
+- **36 konu · 568 alıştırma** (A1 → C1), seviyeye göre sıralı; "Tüm konular"dan istediğini açabilirsin
+- Konuyu %70 ve üzeri bitirene kadar günün dersi o konuda kalır; başlangıç seviyesini kendin seçebilirsin
+- API anahtarı varsa: konu başına **AI ile 8 yeni alıştırma** ve yanlış cevaplar için **AI öğretmene sor**
+- İçerik güvenilir kaynaklardan derlendi ve bağımsız olarak kontrol edildi; her dersin altında kaynak listesi var
+- Dosyalar: `grammar-data.js` (içerik), `grammar.js` (modül)
+
+---
+
 ## 🔑 Kurulum
 
 1. https://console.anthropic.com/settings/keys → **Create Key**

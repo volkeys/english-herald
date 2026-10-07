@@ -522,7 +522,7 @@ function switchTab(tabId) {
 function renderTab(tabId) {
   const pane = document.getElementById('tab' + tabId.charAt(0).toUpperCase() + tabId.slice(1));
   if (!pane) return;
-  if (tabId === 'lessons') pane.innerHTML = renderLessons();
+  if (tabId === 'lessons') { pane.innerHTML = renderLessons(); window.Grammar?.afterRender?.(); }
   else if (tabId === 'daily') pane.innerHTML = renderDaily();
   else if (tabId === 'review') pane.innerHTML = renderReview();
   else if (tabId === 'bank') pane.innerHTML = renderBank();
@@ -648,6 +648,7 @@ function homeDailyStrip() {
 }
 
 function renderLessons() {
+  if (S.gOpen && window.Grammar) return Grammar.render();
   const topic = getTopic(), unit = getUnit(), lc = getColor(S.topicK);
   REG.lesson = unit.vocab;
   const du = dailyUnit(todayKey());
@@ -663,6 +664,7 @@ function renderLessons() {
     const cards = unit.vocab.map((w, i) => vocabCardHTML(w, i, 'lesson')).join('');
     const allSaved = unit.vocab.every(w => isSaved(w.en));
     return `<div class="fade-in">
+      ${window.Grammar ? Grammar.homeCard() : ''}
       ${homeDailyStrip()}
       <div class="topic-bar">${topicBar()}</div>
       ${unitTabsHTML()}${newsBox}
