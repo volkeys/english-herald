@@ -61,6 +61,21 @@ function saveCfg() { LS.set('eh_cfg', S.cfg); }
 function saveBank() { LS.set('eh_bank', S.bank); }
 function saveCompleted() { LS.set('eh_completed', S.completed); }
 
+// Kullanımdan kalkan modeller → güncel karşılıkları.
+// Eski seçim localStorage'da kalmış olabilir (ör. Opus 4.1, 5 Ağustos 2026'da kapatıldı → 404 hatası).
+(function migrateModel() {
+  const RETIRED = {
+    'claude-opus-4-1-20250805': 'claude-opus-5-5',
+    'claude-opus-4-20250514': 'claude-opus-5-5',
+    'claude-sonnet-4-5-20250929': 'claude-sonnet-5-5',
+    'claude-sonnet-4-20250514': 'claude-sonnet-5-5',
+  };
+  const VALID = ['claude-haiku-4-5-20251001', 'claude-sonnet-5-5', 'claude-opus-5-5'];
+  let m = RETIRED[S.cfg.model] || S.cfg.model;
+  if (!VALID.includes(m)) m = 'claude-haiku-4-5-20251001';
+  if (m !== S.cfg.model) { S.cfg.model = m; saveCfg(); }
+})();
+
 // ── SERİ (STREAK) ────────────────────────────────────────
 (function updateStreak() {
   const today = todayKey(), last = S.lastActive;
@@ -210,6 +225,7 @@ function apiHeaders() {
 function apiErrMsg(status, body) {
   if (/anthropic-workspace-id/i.test(body || '')) return 'Anahtarın bir workspace\'e bağlı değil. ⚙️ Ayarlar → API → "Workspace ID" alanını doldur (console.anthropic.com → Settings → Workspaces → ID sütunu), ya da workspace\'e özel yeni bir anahtar oluştur.';
   if (status === 401) return 'API anahtarı geçersiz. Ayarlar → API bölümünden kontrol et.';
+  if (status === 404 && /model/i.test(body || '')) return 'Seçili model artık kullanılamıyor. ⚙️ Ayarlar → API → Model listesinden başka bir model seç.';
   if (status === 429) return 'Çok fazla istek. Biraz bekleyip tekrar dene.';
   if (status === 400 && /credit|balance/i.test(body || '')) return 'API kredin bitmiş görünüyor. console.anthropic.com → Billing.';
   if (status === 529 || status === 503) return 'Sunucu yoğun. Birkaç saniye sonra tekrar dene.';
