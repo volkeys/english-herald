@@ -80,6 +80,7 @@ window.DW_CFG = {"key": "en", "prefix": "eh_", "langName": "İngilizce", "title"
       <div class="hd-acts">
         <button class="bt" data-act="speak" data-text="${attr(w[K])}">🔊</button>
         <button class="bt ${saved ? 'saved' : ''}" data-act="saveWord" data-src="home" data-i="${i}" data-cat="${attr(w.cat)}">${saved ? '★' : '☆'}</button>
+        ${window.SAX ? SAX.soBtn(w[K]) : ''}
       </div></div>`;
   }
   function homeStrip() {
@@ -137,6 +138,7 @@ window.DW_CFG = {"key": "en", "prefix": "eh_", "langName": "İngilizce", "title"
       <div class="dw-pair"><b>${esc(w[K])}</b> = ${esc(w.tr)}${sub ? ` <span class="dw-sub">${esc(sub)}</span>` : ''}</div>
       ${w.ex ? `<div class="dw-ex">"${esc(w.ex)}" <button class="g-spk" data-act="speak" data-text="${attr(w.ex)}">🔊</button></div>` : ''}
       ${w.tip ? `<div class="dw-tip">💡 ${esc(w.tip)}</div>` : ''}
+      ${window.SAX ? SAX.block(w[K]) : ''}
     </div>`;
     return `<div class="g-wrap"><div class="g-head"><button class="btn-ghost btn-xs" data-act="dwQuit">← Derslere dön</button></div>
       <div class="g-run dw-run">
