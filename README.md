@@ -138,6 +138,19 @@ kriterlerin en zayıftan en güçlüye sıralanması.
 
 ---
 
+## 🎧 Kütüphane — podcastlar ve sesli kitaplar (sayfa içinde)
+
+Yeni **🎧 Kütüphane** sekmesi; her şey uygulamanın içinde çalar, yeni sayfa açılmaz:
+- **Öğrenenler için:** 6 Minute English (BBC), VOA Learning English, English Learning for Curious Minds, Thinking in English, Luke's English Podcast
+- **IELTS:** IELTS Energy, All Ears English
+- **Tıp & veteriner:** VETgirl, The Cone of Shame, Veterinary Vertex (AVMA), Inside Health (BBC), ZOE Science & Nutrition
+- **İngiltere'de en çok dinlenenler:** Edison Podcast Metrics UK, 2026 1. çeyrek, ilk 10
+- **Sesli kitaplar (LibriVox, kamu malı):** Black Beauty, The Call of the Wild, White Fang, Alice, Sherlock Holmes…
+
+Podcastlar Apple Podcasts'in, sesli kitaplar Internet Archive'ın resmî gömülü oynatıcısıyla çalar.
+
+---
+
 ## 🔑 Kurulum
 
 1. https://console.anthropic.com/settings/keys → **Create Key**

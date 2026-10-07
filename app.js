@@ -508,7 +508,7 @@ function applyTheme() {
 }
 
 // ── SEKMELER ─────────────────────────────────────────────
-const TAB_IDS = ['lessons', 'daily', 'review', 'bank', 'exam', 'progress', 'chat'];
+const TAB_IDS = ['lessons', 'daily', 'review', 'bank', 'exam', 'progress', 'chat', 'library'];
 function switchTab(tabId) {
   if (!TAB_IDS.includes(tabId)) return;
   if (S.tab === 'chat' && tabId !== 'chat') window.Chat?.onLeave?.();
@@ -531,6 +531,7 @@ function renderTab(tabId) {
   else if (tabId === 'exam') pane.innerHTML = window.Exam ? Exam.render() : '';
   else if (tabId === 'progress') pane.innerHTML = renderProgress();
   else if (tabId === 'chat') { pane.innerHTML = window.Chat ? Chat.render() : ''; window.Chat?.afterRender?.(); }
+  else if (tabId === 'library') pane.innerHTML = window.Library ? Library.render() : '';
   if (tabId === 'exam') window.Exam?.afterRender?.();
 }
 
@@ -1413,7 +1414,7 @@ document.addEventListener('keydown', (e) => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable;
   if (e.key === 'Escape') { closeSettings(); TTS.stop(); Mic.stop(); return; }
   if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key >= '1' && e.key <= '7' && S.tab !== 'review') { switchTab(TAB_IDS[+e.key - 1]); return; }
+  if (e.key >= '1' && e.key <= '8' && S.tab !== 'review') { switchTab(TAB_IDS[+e.key - 1]); return; }
   if (S.tab === 'review') {
     if (e.key === ' ') { e.preventDefault(); ACTIONS.flipCard(); }
     else if (S.rFlip && ['1', '2', '3'].includes(e.key)) ACTIONS.rateCard({ q: { '1': 1, '2': 3, '3': 5 }[e.key] });
