@@ -232,7 +232,7 @@ function apiErrMsg(status, body) {
   return `Hata ${status}. ${String(body || '').slice(0, 160)}`;
 }
 
-async function callAPI(system, messages, opts = {}) {
+async function callAPIRaw(system, messages, opts = {}) {
   if (!S.cfg.apiKey) throw new Error('NO_API_KEY');
   const res = await fetch(API_URL, {
     method: 'POST', headers: apiHeaders(), signal: opts.signal,
@@ -245,8 +245,9 @@ async function callAPI(system, messages, opts = {}) {
   });
   if (!res.ok) throw new Error(apiErrMsg(res.status, await res.text().catch(() => '')));
   const data = await res.json();
-  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  return { text: (data.content || []).filter(b => b.type === 'text').map(b => b.text).join(''), stop: data.stop_reason || '' };
 }
+async function callAPI(system, messages, opts = {}) { return (await callAPIRaw(system, messages, opts)).text; }
 
 /** Streaming — onDelta(parça, tümü) her yeni metinde çağrılır */
 async function callAPIStream(system, messages, opts = {}) {
@@ -287,20 +288,74 @@ async function callAPIStream(system, messages, opts = {}) {
   return full;
 }
 
-/** JSON bekleyen çağrılar için — kod bloklarını temizler, ilk { } bloğunu ayıklar */
+const DEFAULT_JSON_TOKENS = 2200;
+/** JSON bekleyen çağrılar için — kod bloklarını temizler, dengeli { } / [ ] bloğunu ayıklar, küçük bozuklukları onarır */
+function _extractBalanced(t) {
+  const start = t.search(/[\[{]/);
+  if (start < 0) return null;
+  const stack = []; let inStr = false, esc = false;
+  for (let i = start; i < t.length; i++) {
+    const c = t[i];
+    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === '{' || c === '[') stack.push(c);
+    else if (c === '}' || c === ']') { stack.pop(); if (!stack.length) return t.slice(start, i + 1); }
+  }
+  return null;
+}
+function _repairJSON(t) {
+  // string içindeki çıplak satır sonu / sekmeleri kaçır, sondaki fazla virgülleri sil
+  let out = '', inStr = false, esc = false;
+  for (const c of t) {
+    if (inStr) {
+      if (esc) { esc = false; out += c; continue; }
+      if (c === '\\') { esc = true; out += c; continue; }
+      if (c === '"') { inStr = false; out += c; continue; }
+      if (c === '\n') { out += '\\n'; continue; }
+      if (c === '\r') continue;
+      if (c === '\t') { out += '\\t'; continue; }
+      out += c; continue;
+    }
+    if (c === '"') inStr = true;
+    out += c;
+  }
+  return out.replace(/,\s*([}\]])/g, '$1');
+}
 function parseJSONLoose(raw) {
-  let t = String(raw).trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-  try { return JSON.parse(t); } catch {}
-  const s = t.indexOf('{'), e = t.lastIndexOf('}');
-  if (s > -1 && e > s) { try { return JSON.parse(t.slice(s, e + 1)); } catch {} }
-  const a = t.indexOf('['), b = t.lastIndexOf(']');
-  if (a > -1 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch {} }
+  let t = String(raw || '').trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim(); else t = t.replace(/^```(?:json)?/i, '').trim();
+  const cands = [t];
+  const bal = _extractBalanced(t); if (bal) cands.push(bal);
+  const s = t.indexOf('{'), e = t.lastIndexOf('}'); if (s > -1 && e > s) cands.push(t.slice(s, e + 1));
+  const a = t.indexOf('['), b = t.lastIndexOf(']'); if (a > -1 && b > a) cands.push(t.slice(a, b + 1));
+  for (const c of cands) {
+    try { return JSON.parse(c); } catch {}
+    try { return JSON.parse(_repairJSON(c)); } catch {}
+  }
   throw new Error('AI yanıtı okunamadı. Tekrar dene.');
 }
 
 async function callJSON(system, messages, opts = {}) {
-  const raw = await callAPI(system, messages, Object.assign({ maxTokens: 2200 }, opts));
-  return parseJSONLoose(raw);
+  // Yeni modeller daha uzun yazıyor; kesilen yanıt yarım JSON demektir. Tavan cömert tutulur
+  // (yalnızca gerçekten üretilen token ücretlendirilir), kesilirse tavan ikiye katlanıp bir kez daha denenir.
+  const sys = typeof system === 'string'
+    ? system + '\n\nÇIKTI KURALI: Yalnızca geçerli JSON döndür. Kod bloğu, açıklama ya da JSON dışında metin yazma.'
+    : system;
+  let maxTokens = Math.min(Math.max((opts.maxTokens || DEFAULT_JSON_TOKENS) * 2, 4000), 16000);
+  let last = { stop: '' };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = await callAPIRaw(sys, messages, Object.assign({}, opts, { maxTokens }));
+    last = r;
+    try { return parseJSONLoose(r.text); }
+    catch {
+      console.warn('[callJSON] yanıt çözümlenemedi', { deneme: attempt + 1, stop: r.stop, uzunluk: r.text.length, bas: r.text.slice(0, 200), son: r.text.slice(-200) });
+      if (r.stop === 'max_tokens') maxTokens = Math.min(maxTokens * 2, 16000);
+    }
+  }
+  throw new Error(last.stop === 'max_tokens'
+    ? 'AI yanıtı çok uzun olduğu için yarıda kesildi. Tekrar dene; sürerse ⚙️ Ayarlar → Model\'den Sonnet ya da Haiku seç.'
+    : 'AI yanıtı okunamadı. Tekrar dene.');
 }
 
 // ── XP / SEVİYE / ROZET ──────────────────────────────────

@@ -1,6 +1,6 @@
 // The English Herald — Service Worker
 // Ders içeriği çevrimdışı çalışsın; AI istekleri asla önbelleğe alınmasın.
-const CACHE = 'herald-v2.5.1';
+const CACHE = 'herald-v2.5.2';
 const SHELL = [
   './', './index.html', './style.css',
   './data.js', './vocab.js', './exam-data.js', './app.js', './ordlista.js', './chat.js', './exam.js',
